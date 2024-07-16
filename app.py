@@ -54,11 +54,7 @@ def save_timetable_to_pocketbase(start_date, end_date, selected_course_id):
         "course_exam_start_date": start_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
         "course_exam_end_date": end_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
         "exam_of": selected_course_id,
-        "scores": True,
-        "marksheet_distribution": True,
-        "result_date": datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-        "tt_released": True,
-        "tt_release_date": datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+        
     }
 
     response = requests.post(f'{POCKETBASE_URL}/api/collections/exams/records', headers=HEADERS, json=timetable_data)
