@@ -68,15 +68,30 @@ def save_timetable_to_pocketbase(start_date, end_date, selected_course_id):
 def main():
     st.title('Timetable Generator')
 
-    # Step 1: Select Course
+    # Fetch existing courses
     courses = fetch_courses()
+
+    st.header('Generate Timetable')
+    
+    # Step 1: Select Course Code or Course Name
+    st.write("Select a course code or course name to generate the timetable:")
+    course_codes = [course['course_code'] for course in courses]
     course_names = [course['course_name'] for course in courses]
-
-    selected_course_name = st.selectbox('Select Course', course_names, index=0)
-
-    if selected_course_name:
+    
+    selected_course_code = st.selectbox('Select Course Code (Optional)', [''] + course_codes)
+    selected_course_name = st.selectbox('Select Course Name (Optional)', [''] + course_names)
+    
+    selected_course = None
+    if selected_course_code:
+        selected_course = next(course for course in courses if course['course_code'] == selected_course_code)
+        course_name = selected_course['course_name']
+        st.text_input('Course Name', value=course_name, disabled=True)
+    elif selected_course_name:
         selected_course = next(course for course in courses if course['course_name'] == selected_course_name)
-        
+        course_code = selected_course['course_code']
+        st.text_input('Course Code', value=course_code, disabled=True)
+
+    if selected_course:
         # Step 2: Select Start Date and End Date
         st.write("Select the timetable duration:")
         start_date = st.date_input('Start Date', value=datetime.today())
@@ -99,7 +114,7 @@ def main():
             valid_dates = [(date, day) for date, day in available_dates if date not in [holiday[0] for holiday in holiday_dates]]
 
             # Step 3: Select Subjects
-            st.write(f"Select subjects for {selected_course_name}:")
+            st.write(f"Select subjects for {selected_course['course_name']}:")
             subjects = fetch_subjects(selected_course['id'])
             selected_subjects = {}
             for subject in subjects:
@@ -109,17 +124,20 @@ def main():
             if selected_subjects:
                 # Step 4: Set Common Time Slot for All Subjects
                 st.write("Set common time slot for all subjects:")
-                start_time = st.text_input('Start time (e.g., 9:00 AM)', value='9:00 AM')
-                end_time = st.text_input('End time (e.g., 12:00 PM)', value='12:00 PM')
+                times = [f"{hour}:{minute:02d} AM" for hour in range(1, 12) for minute in range(0, 60, 5)] + \
+                        [f"{hour}:{minute:02d} PM" for hour in range(1, 12) for minute in range(0, 60, 5)]
+                start_time = st.selectbox('Start Time', times, index=8*12)  # Default to 9:00 AM
+                end_time = st.selectbox('End Time', times, index=11*12)  # Default to 12:00 PM
 
                 # Step 5: Set Dates for Selected Subjects
                 timetable_data = []
+
                 for subject_name, subject in selected_subjects.items():
                     with st.expander(f'{subject_name}'):
                         dates_with_days = [f"{date.strftime('%Y-%m-%d')} ({day})" for date, day in valid_dates]
                         selected_dates = st.multiselect(f'Select Dates for {subject_name}', dates_with_days)
                         selected_date_objs = [date for date, day in valid_dates if f"{date.strftime('%Y-%m-%d')} ({day})" in selected_dates]
-
+                        
                         for date in selected_date_objs:
                             timetable_data.append({'Date': date.strftime('%d/%m/%Y'), 'Subject': subject_name, 'Time': f'{start_time} to {end_time}'})
 
